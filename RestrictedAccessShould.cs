@@ -44,29 +44,12 @@ namespace JwtBearerExample.Tests
             Assert.Contains("Initial data configured", stringResponse);
         }
 
-        [Fact]
+        [Theory]
         [Trait("Category", "Public")]
-        public async Task BlockUnauthorizedAccessManagerData()
+        [MemberData(nameof(InternalRestrictedUrlTestData.TestData), MemberType = typeof(InternalRestrictedUrlTestData))]
+        public async Task BlockUnauthorizedAccess(string uri)
         {
-            var apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/manager");
-
-            Assert.True(apiResponse.StatusCode == HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        [Trait("Category", "Public")]
-        public async Task BlockUnauthorizedAccessEmployeeData()
-        {
-            var apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/employee");
-
-            Assert.True(apiResponse.StatusCode == HttpStatusCode.Unauthorized);
-        }
-
-        [Fact]
-        [Trait("Category", "Public")]
-        public async Task BlockUnauthorizedAccessAuthenticatedData()
-        {
-            var apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/authenticated");
+            var apiResponse = await _apiClient.GetAsync(uri);
 
             Assert.True(apiResponse.StatusCode == HttpStatusCode.Unauthorized);
         }
@@ -87,13 +70,15 @@ namespace JwtBearerExample.Tests
             Assert.True(apiResponse.StatusCode == HttpStatusCode.NotFound);
         }
 
-        [Fact]
+        [Theory]
         [Trait("Category", "Authorized")]
-        public async Task LoginWithSuccess()
+        [InlineData("user_1", "654321")]
+        [InlineData("manager_1", "123456")]
+        public async Task LoginWithSuccess(string user, string password)
         {
             var loginData = new {
-                login = "user_1",
-                password = "654321"
+                login = user,
+                password = password
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
@@ -103,13 +88,15 @@ namespace JwtBearerExample.Tests
             Assert.True(apiResponse.IsSuccessStatusCode);
         }
 
-        [Fact]
-        [Trait("Category", "Authorized")]
-        public async Task EmployeeAccessPublicData()
+        [Theory]
+        [Trait("Category", "Forbidden")]
+        [InlineData("user_1", "654321", "https://localhost:5001/content/manager")]
+        [InlineData("manager_1", "123456", "https://localhost:5001/content/employee")]
+        public async Task ForbiddenAccessAuthenticatedData(string user, string password, string url)
         {
             var loginData = new {
-                login = "user_1",
-                password = "654321"
+                login = user,
+                password = password
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
@@ -124,70 +111,19 @@ namespace JwtBearerExample.Tests
             string token =  (string)authData["token"];
 
             _apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/public");
-
-            Assert.True(apiResponse.IsSuccessStatusCode);
-
-        }
-
-        [Fact]
-        [Trait("Category", "Authorized")]
-        public async Task EmployeeAccessEmployeeData()
-        {
-            var loginData = new {
-                login = "user_1",
-                password = "654321"
-            };
-
-            var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
-
-            var apiResponse = await _apiClient.PostAsync("https://localhost:5001/user/login", content);
-
-            Assert.True(apiResponse.IsSuccessStatusCode);
-
-            var response = await apiResponse.Content.ReadAsStringAsync();
-
-            dynamic authData = JObject.Parse(response);
-            string token =  (string)authData["token"];
-
-            _apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/employee");
-
-            Assert.True(apiResponse.IsSuccessStatusCode);
-        }
-
-        [Fact]
-        [Trait("Category", "Authorized")]
-        public async Task EmployeeAccessManagerData()
-        {
-            var loginData = new {
-                login = "user_1",
-                password = "654321"
-            };
-
-            var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
-
-            var apiResponse = await _apiClient.PostAsync("https://localhost:5001/user/login", content);
-
-            Assert.True(apiResponse.IsSuccessStatusCode);
-
-            var response = await apiResponse.Content.ReadAsStringAsync();
-
-            dynamic authData = JObject.Parse(response);
-            string token =  (string)authData["token"];
-
-            _apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/manager");
+            apiResponse = await _apiClient.GetAsync(url);
 
             Assert.True(apiResponse.StatusCode == HttpStatusCode.Forbidden);
         }
-        [Fact]
+
+        [Theory]
         [Trait("Category", "Authorized")]
-        public async Task EmployeeAccessAuthenticatedData()
+        [MemberData(nameof(InternalRestrictedAuthorizedAccessData.AuthorizedData), MemberType = typeof(InternalRestrictedAuthorizedAccessData))]
+        public async Task AllowedAccessAuthenticatedData(string user, string password, string url)
         {
             var loginData = new {
-                login = "user_1",
-                password = "654321"
+                login = user,
+                password = password
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
@@ -202,12 +138,10 @@ namespace JwtBearerExample.Tests
             string token =  (string)authData["token"];
 
             _apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            apiResponse = await _apiClient.GetAsync("https://localhost:5001/content/authenticated");
+            apiResponse = await _apiClient.GetAsync(url);
 
             Assert.True(apiResponse.IsSuccessStatusCode);
         }
-
-        // Test multiple logins
 
     }
 }
