@@ -5,8 +5,8 @@ This project was implemented to test the web api project [Jwt Bearer Example][1]
 To do that the project [Jwt Bearer Example][1] must be started.
 
 The tests implemented inside the class [RestrictedAccessShoud.cs][2] are:
-* Access to public data (`AllowAccessPublicData`, public Trait)
-* Block unauthorized access (`BlockUnauthorizedAccess`, public Trait)
+* Access to public data (`AllowAccessPublicData`, Public Trait)
+* Block unauthorized access (`BlockUnauthorizedAccess`, Public Trait)
 * Refused invalid login credentials (`RefuseInvalidUserPassword`, Login Trait)
 * Successful authentication (`LoginWithSuccess`, Authorized Trait)
 * Forbidden access to restricted resources (`ForbiddenAccessAuthenticatedData`, Forbidden Trait)
